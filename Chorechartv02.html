@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Family Weekly Planner</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f4f7f9; color: #333; margin: 0; padding: 15px; }
+        .container { max-width: 1400px; margin: 0 auto; }
+        h1, h3 { color: #1e3a5f; text-align: center; }
+        
+        .date-nav { display: flex; justify-content: space-between; align-items: center; text-align: center; margin-bottom: 20px; flex-wrap: wrap; }
+        .date-nav button { background-color: #6c757d; font-size: 1em; padding: 10px 15px; margin: 5px; }
+        .date-nav button:hover { background-color: #5a6268; }
+        #random-activity-btn { background-color: #6610f2; } #random-activity-btn:hover { background-color: #530bca;}
+        .date-nav p { font-size: 1.1em; margin: 0 10px; flex-grow: 1; }
+        
+        .focus-view { display: grid; grid-template-columns: 1fr; gap: 15px; margin-bottom: 30px; }
+        .full-week-view { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 15px; }
+
+        @media (min-width: 768px) {
+            .focus-view { grid-template-columns: 1fr 1fr; }
+            .focus-view .today-card { grid-row: 1 / 3; }
+        }
+
+        .day-card, .allowance-card, .school-card { background-color: #ffffff; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); padding: 20px; }
+        .day-card { border-left: 5px solid #007bff; }
+        .day-card.today-card { border-left-color: #ffc107; box-shadow: 0 6px 12px rgba(255,193,7,0.3); }
+        .day-card h2, .allowance-card h2, .school-card h2 { margin-top: 0; color: #1e3a5f; }
+        .day-card h4 { color: #0056b3; border-bottom: 1px solid #eee; padding-bottom: 5px; margin-top: 20px; }
+        ul { list-style-type: none; padding: 0; }
+        li { padding: 8px 0; border-bottom: 1px solid #f0f0f0; }
+        li:last-child { border-bottom: none; }
+        .meal { font-weight: bold; color: #17a2b8; }
+        a.meal { text-decoration: none; border-bottom: 2px dotted #17a2b8; }
+        a.meal:hover { color: #107584; }
+        .person { font-weight: bold; }
+        input[type="checkbox"] { transform: scale(1.5); margin-right: 10px; accent-color: #28a745; }
+        label.checked { text-decoration: line-through; color: #888; }
+        .allowance-card { background-color: #e8f5e9; border-left: 5px solid #4caf50; }
+        .allowance-card li, .school-card li, .chore-item { display: flex; align-items: center; }
+        .allowance-card .chore-details { display: flex; justify-content: space-between; width: 100%; align-items: center; }
+        .allowance-total { text-align: right; font-size: 1.5em; font-weight: bold; color: #1e8e3e; }
+        .allowance-potential { text-align: right; font-size: 0.9em; color: #555; margin-top: 5px; }
+        .school-card { background-color: #e3f2fd; border-left: 5px solid #2196f3; }
+        
+        .controls { text-align: center; margin-top: 30px; padding-top: 20px; border-top: 2px solid #e0e0e0; display: flex; flex-wrap: wrap; justify-content: center; gap: 15px; }
+        button { background-color: #28a745; color: white; border: none; padding: 15px 25px; border-radius: 8px; font-size: 1.2em; cursor: pointer; transition: background-color 0.3s; }
+        button:hover { background-color: #218838; }
+        #edit-lists-btn { background-color: #007bff; } #edit-lists-btn:hover { background-color: #0056b3; }
+        #reset-allowance-btn { background-color: #dc3545; } #reset-allowance-btn:hover { background-color: #c82333; }
+        #goto-today-btn { background-color: #ffc107; color: #333; } #goto-today-btn:hover { background-color: #e0a800; }
+        #true-random-btn { background-color: #17a2b8; } #true-random-btn:hover { background-color: #128293; }
+        #print-btn { background-color: #343a40; } #print-btn:hover { background-color: #23272b; }
+        
+        .modal-overlay { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.6); }
+        .modal-content { background-color: #fefefe; margin: 5% auto; padding: 20px; border: 1px solid #888; width: 90%; max-width: 800px; border-radius: 8px; }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #ccc; padding-bottom: 10px; }
+        .modal-header h2 { margin: 0; } .close-btn { color: #aaa; font-size: 28px; font-weight: bold; cursor: pointer; }
+        .modal-body { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 15px; max-height: 70vh; overflow-y: auto; padding: 10px; }
+        .modal-body h4 { margin-top: 0; } textarea { width: 100%; height: 150px; padding: 5px; font-family: monospace; border: 1px solid #ccc; border-radius: 4px; }
+        .modal-footer { margin-top: 20px; text-align: right; }
+
+        @media print {
+            body { background-color: #fff; font-size: 10pt; padding: 0; margin: 20px; }
+            .date-nav, .controls, .focus-view, hr, h3, #settings-modal, h1, p:has(strong#currentDate) {
+                display: none !important;
+            }
+            .full-week-view { display: block; }
+            .day-card { box-shadow: none; border-radius: 0; border: none; border-top: 2px solid #ccc; padding: 10px 0; page-break-inside: avoid; }
+            .day-card:first-child { border-top: none; }
+            .day-card h2 { font-size: 14pt; color: #000; }
+            .day-card h4 { font-size: 11pt; color: #000; margin-top: 8px; border: none; }
+            input[type="checkbox"] { display: none; }
+            li { border: none; padding: 2px 0; }
+            .person { display: inline; }
+            label::before { content: "☐ "; font-family: monospace; }
+            label.checked::before { content: "☑ "; font-family: monospace; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Family Weekly Planner</h1>
+        <div class="date-nav">
+            <button id="prev-day-btn">◀ Prev Day</button>
+            <button id="random-activity-btn">🎲 Suggest Activity</button>
+            <p>Viewing: <strong id="currentDate"></strong></p>
+            <button id="next-day-btn">Next Day ▶</button>
+        </div>
+        <div id="focus-container" class="focus-view"></div>
+        <hr style="margin: 30px 0;">
+        <h3>Full Weekly Schedule</h3>
+        <div id="plan-container" class="full-week-view"></div>
+        <div class="controls">
+            <button id="generate-plan-btn">Generate New Week</button>
+            <button id="edit-lists-btn">⚙️ Edit Lists</button>
+            <button id="reset-allowance-btn">Reset Allowance</button>
+            <button id="goto-today-btn">Go to Today</button>
+            <button id="true-random-btn">🌍 Random Recipe</button>
+            <button id="print-btn">🖨️ Print Week</button>
+        </div>
+    </div>
+    <div id="settings-modal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header"><h2>Edit Planner Lists</h2><span class="close-btn">&times;</span></div>
+            <div class="modal-body">
+                <div><h4>Family Members</h4><textarea id="familyMembers-edit" placeholder="One name per line"></textarea></div>
+                <div><h4>✅ Tier 1 Chores (Easy)</h4><textarea id="tier1Chores-edit" placeholder="One chore per line"></textarea></div>
+                <div><h4>✅✅ Tier 2 Chores (Medium)</h4><textarea id="tier2Chores-edit" placeholder="One chore per line"></textarea></div>
+                <div><h4>✅✅✅ Tier 3 Chores (Hard)</h4><textarea id="tier3Chores-edit" placeholder="One chore per line"></textarea></div>
+                <div><h4>👨‍👩‍👦 Group Chores</h4><textarea id="groupChores-edit" placeholder="One chore per line"></textarea></div>
+                <div><h4>🎲 Family Activities</h4><textarea id="familyActivities-edit" placeholder="One activity per line"></textarea></div>
+                <div style="grid-column: 1 / -1;"><h4>🍲 Meal Ideas (for weekly plan)</h4><textarea id="mealIdeas-edit" placeholder="Format: Meal Name :: URL"></textarea></div>
+                <div style="grid-column: 1 / -1;"><h4>💰 Allowance Chores (Value)</h4><textarea id="allowanceChores-edit" placeholder="Format: Chore description :: Value"></textarea></div>
+                <div style="grid-column: 1 / -1;"><h4>🎒 School Checklist Items</h4><textarea id="schoolChecklist-edit" placeholder="One item per line"></textarea></div>
+            </div>
+            <div class="modal-footer"><button id="save-settings-btn">Save Changes</button></div>
+        </div>
+    </div>
+
+<script>
+    let appData = {}; let weeklyPlan = {}; let viewDate = new Date();
+    const defaultData = {
+        familyMembers: ["Dad", "Mom", "Son"],
+        tier1Chores: ["Wipe bathroom counter", "Take out kitchen trash", "Wipe coffee table"],
+        tier2Chores: ["Clean one toilet", "Vacuum living room", "Wipe appliance fronts", "Unload dishwasher"],
+        tier3Chores: ["Mop kitchen floor", "Scrub one shower/tub", "Take all bins to curb"],
+        groupChores: ["Kitchen Reset", "Living Room Reset", "Entryway Blitz"],
+        mealIdeas: [ 
+            { name: "Weeknight Tacos", url: "https://www.allrecipes.com/recipe/222830/ten-minute-tacos/" }, 
+            { name: "Spaghetti and Meatballs", url: "https://www.simplyrecipes.com/recipes/spaghetti_and_meatballs/" }, 
+            { name: "Sheet-Pan Sausage and Peppers", url: "https://www.foodnetwork.com/recipes/ina-garten/sausage-and-peppers-recipe-2125345" },
+            { name: "Homemade Pan Pizza", url: "https://www.budgetbytes.com/pan-pizza/" },
+            { name: "Classic Burgers", url: "https://www.allrecipes.com/recipe/25473/the-best-burger-ever/" },
+            { name: "Easy Chicken Stir-Fry", url: "https://www.simplyrecipes.com/recipes/chicken_stir_fry/" }
+        ],
+        allowanceChores: [ { task: "Deep clean your bathroom", value: 5 }, { task: "Do all your own laundry", value: 5 }, { task: "Mow the lawns", value: 10 }, { task: "Help with grocery shopping", value: 5 } ],
+        schoolChecklistItems: ["Backpack packed", "Homework complete", "Student ID"],
+        familyActivities: ["Watch a movie", "Play a board game", "Go for a walk", "Do a puzzle together", "Bake cookies or a dessert", "Go out for ice cream", "Play a video game together", "Look at old family photos", "Build a LEGO set", "Go to the park", "Plan a dream vacation", "Listen to a new album"]
+    };
+
+    function loadAppData() {
+        const savedData = localStorage.getItem('familyPlannerData');
+        appData = savedData ? JSON.parse(savedData) : defaultData;
+        // Backwards compatibility checks to prevent crashes
+        if (!appData.allowanceChores) appData.allowanceChores = defaultData.allowanceChores;
+        if (!appData.schoolChecklistItems) appData.schoolChecklistItems = defaultData.schoolChecklistItems;
+        // FIX: This check is now safer and prevents crashes if the meal list is empty
+        if (!appData.mealIdeas || !Array.isArray(appData.mealIdeas) || (appData.mealIdeas.length > 0 && typeof appData.mealIdeas[0] === 'string')) { 
+            appData.mealIdeas = defaultData.mealIdeas; 
+        }
+        if (!appData.familyActivities) appData.familyActivities = defaultData.familyActivities;
+        saveAppData();
+    }
+    function saveAppData() { localStorage.setItem('familyPlannerData', JSON.stringify(appData)); }
+
+    const generateBtn = document.getElementById('generate-plan-btn'); const editBtn = document.getElementById('edit-lists-btn'); const resetAllowanceBtn = document.getElementById('reset-allowance-btn'); const trueRandomBtn = document.getElementById('true-random-btn'); const randomActivityBtn = document.getElementById('random-activity-btn'); const printBtn = document.getElementById('print-btn');
+    const planContainer = document.getElementById('plan-container'); const focusContainer = document.getElementById('focus-container');
+    const currentDateEl = document.getElementById('currentDate');
+
+    function updateDate(date) { viewDate = new Date(date); currentDateEl.textContent = viewDate.toLocaleDateString('en-us', { weekday:"long", year:"numeric", month:"long", day:"numeric"}); }
+    function shuffle(array) { for (let i = array.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1));[array[i], array[j]] = [array[j], array[i]]; } return array; }
+
+    function generateWeeklyPlan() {
+        if (!confirm('Are you sure you want to generate a new plan? This will replace the current week.')) return;
+        const newPlan = {}; const daysOfWeek = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+        const weeklyChorePattern = { "Monday": 'tier1Chores', "Tuesday": 'tier2Chores', "Wednesday": 'tier1Chores', "Thursday": 'tier2Chores', "Friday": 'tier3Chores', "Saturday": 'tier1Chores', "Sunday": 'tier2Chores' };
+        const chorePool = { tier1Chores: shuffle([...appData.tier1Chores]), tier2Chores: shuffle([...appData.tier2Chores]), tier3Chores: shuffle([...appData.tier3Chores]) };
+        const shuffledMeals = shuffle([...appData.mealIdeas]); const shuffledGroupChores = shuffle([...appData.groupChores]);
+        daysOfWeek.forEach((day, dayIndex) => {
+            const individualChores = {};
+            appData.familyMembers.forEach((member, memberIndex) => {
+                const rotatedIndex = (dayIndex + memberIndex) % appData.familyMembers.length;
+                const assignedMember = appData.familyMembers[rotatedIndex]; const choreTierName = weeklyChorePattern[day];
+                const task = (chorePool[choreTierName] && chorePool[choreTierName].length > 0) ? chorePool[choreTierName].pop() : "Free Day!";
+                individualChores[assignedMember] = { task: task, done: false };
+            });
+            newPlan[day] = { meal: shuffledMeals.pop() || {name: "Leftovers", url: ""}, groupChore: { task: shuffledGroupChores.pop() || "Family Choice", done: false }, individualChores: individualChores };
+        });
+        weeklyPlan = newPlan; localStorage.setItem('familyWeeklyPlan', JSON.stringify(weeklyPlan));
+        updateDate(new Date()); redrawUI();
+    }
+    
+    function redrawUI() {
+        planContainer.innerHTML = ''; focusContainer.innerHTML = '';
+        const viewDateName = viewDate.toLocaleDateString('en-us', { weekday: 'long' });
+        if (Object.keys(weeklyPlan).length > 0) {
+            Object.keys(weeklyPlan).forEach(day => {
+                const card = createDayCard(day, weeklyPlan[day]);
+                if (day === viewDateName) {
+                    card.classList.add('today-card'); focusContainer.appendChild(card.cloneNode(true));
+                }
+                planContainer.appendChild(card);
+            });
+        }
+        focusContainer.appendChild(createSchoolChecklistCard()); focusContainer.appendChild(createAllowanceCard());
+        addEventListeners();
+    }
+
+    function createDayCard(day, dayData) {
+        const card = document.createElement('div'); card.className = 'day-card'; let individualChoresHTML = '<ul>';
+        appData.familyMembers.forEach(member => {
+            const chore = dayData.individualChores[member];
+            individualChoresHTML += `<li class="chore-item"><input type="checkbox" id="chore-${day}-${member}" ${chore.done ? 'checked' : ''}><label for="chore-${day}-${member}" class="${chore.done ? 'checked' : ''}"><span class="person">${member}:</span> ${chore.task}</label></li>`;
+        });
+        individualChoresHTML += '</ul>'; const groupChore = dayData.groupChore;
+        let groupChoreHTML = `<li class="chore-item"><input type="checkbox" id="chore-${day}-group" ${groupChore.done ? 'checked' : ''}><label for="chore-${day}-group" class="${groupChore.done ? 'checked' : ''}">${groupChore.task}</label></li>`;
+        const meal = dayData.meal || {name: "TBD", url: ""};
+        const mealHTML = meal.url ? `<a href="${meal.url}" target="_blank" class="meal">${meal.name}</a>` : `<p class="meal">${meal.name}</p>`;
+        card.innerHTML = `<h2>${day}</h2><h4>🍲 Meal</h4>${mealHTML}<h4>🙋‍♂️ Individual Chores</h4>${individualChoresHTML}<h4>👨‍👩‍👦 Group Chore</h4><ul>${groupChoreHTML}</ul>`;
+        return card;
+    }
+
+    function createSchoolChecklistCard() {
+        const card = document.createElement('div'); card.className = 'school-card'; let listHTML = '<ul>';
+        appData.schoolChecklistItems.forEach((item, index) => { listHTML += `<li><input type="checkbox" class="school-cb" id="school-${index}"><label for="school-${index}">${item}</label></li>`; });
+        listHTML += '</ul>'; card.innerHTML = `<h2>🎒 School Day Essentials</h2>${listHTML}`; return card;
+    }
+
+    function createAllowanceCard() {
+        const card = document.createElement('div'); card.className = 'allowance-card'; let choresHTML = '<ul>'; let potentialTotal = 0;
+        appData.allowanceChores.forEach((chore, index) => {
+            choresHTML += `<li><div class="chore-item"><input type="checkbox" class="allowance-cb" id="allowance-${index}"><label for="allowance-${index}">${chore.task}</label></div><strong>$${chore.value.toFixed(2)}</strong></li>`;
+            potentialTotal += chore.value;
+        });
+        choresHTML += '</ul>'; card.innerHTML = `<h2>💰 Weekly Allowance Chores</h2>${choresHTML}<div class="allowance-potential">Potential: $${potentialTotal.toFixed(2)}</div><div id="allowance-total" class="allowance-total">Total Earned: $0.00</div>`;
+        return card;
+    }
+
+    function addEventListeners() {
+        document.querySelectorAll('.chore-item input[type="checkbox"]').forEach(cb => {
+            cb.addEventListener('change', (e) => {
+                const [_, day, person] = e.target.id.split('-');
+                document.querySelectorAll(`label[for="${e.target.id}"]`).forEach(label => label.classList.toggle('checked', e.target.checked));
+                if (person === 'group') weeklyPlan[day].groupChore.done = e.target.checked;
+                else weeklyPlan[day].individualChores[person].done = e.target.checked;
+                localStorage.setItem('familyWeeklyPlan', JSON.stringify(weeklyPlan));
+            });
+        });
+        document.querySelectorAll('.school-cb').forEach(cb => cb.addEventListener('change', (e) => { document.querySelectorAll(`label[for="${e.target.id}"]`).forEach(label => label.classList.toggle('checked', e.target.checked)); saveSchoolChecklistState(); }));
+        document.querySelectorAll('.allowance-cb').forEach(cb => cb.addEventListener('change', (e) => { document.querySelectorAll(`label[for="${e.target.id}"]`).forEach(label => label.classList.toggle('checked', e.target.checked)); updateAllowanceTotal(); }));
+        loadSchoolChecklistState(); loadAllowanceState();
+    }
+    
+    function saveSchoolChecklistState() {
+        const checkedState = []; document.querySelectorAll('.focus-view .school-cb').forEach(cb => checkedState.push(cb.checked));
+        localStorage.setItem('schoolChecklistState', JSON.stringify({ date: viewDate.toISOString().split('T')[0], checks: checkedState }));
+    }
+
+    function loadSchoolChecklistState() {
+        const savedState = JSON.parse(localStorage.getItem('schoolChecklistState') || '{}');
+        const viewDateString = viewDate.toISOString().split('T')[0];
+        if (savedState.date === viewDateString) {
+            savedState.checks.forEach((isChecked, index) => {
+                document.querySelectorAll(`#school-${index}`).forEach(cb => {
+                    cb.checked = isChecked; document.querySelectorAll(`label[for="school-${index}"]`).forEach(label => label.classList.toggle('checked', isChecked));
+                });
+            });
+        }
+    }
+    
+    function updateAllowanceTotal() {
+        let total = 0; appData.allowanceChores.forEach((chore, index) => { const cb = document.querySelector(`.focus-view #allowance-${index}`); if (cb && cb.checked) total += chore.value; });
+        document.querySelectorAll('#allowance-total').forEach(el => el.textContent = `Total Earned: $${total.toFixed(2)}`); saveAllowanceState();
+    }
+
+    function saveAllowanceState() {
+        const checkedState = []; document.querySelectorAll('.focus-view .allowance-cb').forEach(cb => checkedState.push(cb.checked));
+        localStorage.setItem('familyAllowanceState', JSON.stringify(checkedState));
+    }
+
+    function loadAllowanceState() {
+        const savedState = JSON.parse(localStorage.getItem('familyAllowanceState') || '[]');
+        savedState.forEach((isChecked, index) => {
+            document.querySelectorAll(`#allowance-${index}`).forEach(cb => {
+                cb.checked = isChecked; document.querySelectorAll(`label[for="allowance-${index}"]`).forEach(label => label.classList.toggle('checked', isChecked));
+            });
+        });
+        updateAllowanceTotal();
+    }
+    
+    function resetAllowance() { if (confirm('Are you sure you want to reset the allowance chart? All checks will be cleared.')) { localStorage.removeItem('familyAllowanceState'); redrawUI(); } }
+    
+    function advanceDay(direction) {
+        const newDate = new Date(viewDate); newDate.setDate(newDate.getDate() + direction);
+        updateDate(newDate); const dayOfWeek = newDate.getDay();
+        if (direction > 0 && dayOfWeek > 0 && dayOfWeek < 6) { localStorage.removeItem('schoolChecklistState'); }
+        redrawUI();
+    }
+    
+    async function suggestTrulyRandomRecipe() {
+        try {
+            const response = await fetch('https://www.themealdb.com/api/json/v1/1/random.php');
+            const data = await response.json(); const meal = data.meals[0];
+            const recipeName = meal.strMeal; const recipeUrl = meal.strSource || meal.strYoutube;
+            if (confirm(`Tonight's random suggestion is: ${recipeName}.\n\nWould you like to open the recipe?`)) {
+                if(recipeUrl) window.open(recipeUrl, '_blank');
+                else alert("Sorry, no recipe link is available for this meal.");
+            }
+        } catch (error) { alert("Sorry, couldn't fetch a random recipe. Please check your internet connection and try again."); }
+    }
+
+    function suggestRandomActivity() {
+        if (!appData.familyActivities || appData.familyActivities.length === 0) { alert('Your activity list is empty. Add some ideas in the "Edit Lists" menu!'); return; }
+        const activity = appData.familyActivities[Math.floor(Math.random() * appData.familyActivities.length)];
+        const person = appData.familyMembers[Math.floor(Math.random() * appData.familyMembers.length)];
+        alert(`Tonight's suggested activity is: ${activity}.\n\n${person} gets to choose!`);
+    }
+
+    const modal = document.getElementById('settings-modal'); const closeBtn = document.querySelector('.close-btn'); const saveSettingsBtn = document.getElementById('save-settings-btn');
+    function openSettingsModal() {
+        document.getElementById('familyMembers-edit').value = appData.familyMembers.join('\n');
+        document.getElementById('mealIdeas-edit').value = appData.mealIdeas.map(m => m.url ? `${m.name} :: ${m.url}` : m.name).join('\n');
+        document.getElementById('tier1Chores-edit').value = appData.tier1Chores.join('\n');
+        document.getElementById('tier2Chores-edit').value = appData.tier2Chores.join('\n');
+        document.getElementById('tier3Chores-edit').value = appData.tier3Chores.join('\n');
+        document.getElementById('groupChores-edit').value = appData.groupChores.join('\n');
+        document.getElementById('familyActivities-edit').value = appData.familyActivities.join('\n');
+        document.getElementById('allowanceChores-edit').value = appData.allowanceChores.map(c => `${c.task} :: ${c.value}`).join('\n');
+        document.getElementById('schoolChecklist-edit').value = appData.schoolChecklistItems.join('\n');
+        modal.style.display = 'block';
+    }
+    function closeSettingsModal() { modal.style.display = 'none'; }
+    function saveSettings() {
+        const parseToArray = (id) => document.getElementById(id).value.split('\n').map(s => s.trim()).filter(Boolean);
+        appData.familyMembers = parseToArray('familyMembers-edit');
+        appData.tier1Chores = parseToArray('tier1Chores-edit');
+        appData.tier2Chores = parseToArray('tier2Chores-edit');
+        appData.tier3Chores = parseToArray('tier3Chores-edit');
+        appData.groupChores = parseToArray('groupChores-edit');
+        appData.schoolChecklistItems = parseToArray('schoolChecklist-edit');
+        appData.familyActivities = parseToArray('familyActivities-edit');
+        appData.mealIdeas = document.getElementById('mealIdeas-edit').value.split('\n').filter(Boolean).map(line => { const parts = line.split('::'); return { name: parts[0] ? parts[0].trim() : 'Unnamed Meal', url: parts[1] ? parts[1].trim() : '' }; });
+        appData.allowanceChores = document.getElementById('allowanceChores-edit').value.split('\n').filter(Boolean).map(line => { const parts = line.split('::'); return { task: parts[0] ? parts[0].trim() : 'Unnamed Chore', value: parseFloat(parts[1]) || 0 }; });
+        saveAppData(); alert('Settings saved!'); closeSettingsModal(); redrawUI();
+    }
+    
+    const prevDayBtn = document.getElementById('prev-day-btn'); const nextDayBtn = document.getElementById('next-day-btn'); const gotoTodayBtn = document.getElementById('goto-today-btn');
+
+    window.addEventListener('load', () => {
+        loadAppData(); weeklyPlan = JSON.parse(localStorage.getItem('familyWeeklyPlan') || '{}');
+        updateDate(new Date()); redrawUI();
+    });
+
+    generateBtn.addEventListener('click', generateWeeklyPlan); editBtn.addEventListener('click', openSettingsModal); resetAllowanceBtn.addEventListener('click', resetAllowance);
+    prevDayBtn.addEventListener('click', () => advanceDay(-1)); nextDayBtn.addEventListener('click', () => advanceDay(1)); gotoTodayBtn.addEventListener('click', () => { updateDate(new Date()); redrawUI(); });
+    trueRandomBtn.addEventListener('click', suggestTrulyRandomRecipe); randomActivityBtn.addEventListener('click', suggestRandomActivity); printBtn.addEventListener('click', () => window.print());
+    closeBtn.addEventListener('click', closeSettingsModal); saveSettingsBtn.addEventListener('click', saveSettings);
+    window.addEventListener('click', (event) => { if (event.target == modal) closeSettingsModal(); });
+</script>
+</body>
+</html>
